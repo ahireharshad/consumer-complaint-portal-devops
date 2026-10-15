@@ -1,32 +1,46 @@
-# Submission and demonstration evidence checklist
+# Submission Evidence Checklist
 
-Capture real screenshots/logs from your own system and add them to your report. Do not present planned evidence as completed.
+Capture evidence from the real environment; do not fabricate logs or screenshots.
 
-- [ ] Repository page, folder structure, README and commit history
-- [ ] Issue template and backlog/task board
-- [ ] Feature branch, pull request, review and merge
-- [ ] Conflict demonstration and resolution (create two edits on separate branches; do not manufacture a false log)
-- [ ] Local application home page and successful complaint submission/reference
-- [ ] Validation failure for invalid email/short description
-- [ ] Status tracking before and after reviewer decision
-- [ ] Maven Selenium test command and `target/surefire-reports`
-- [ ] Jenkins build stages, published JUnit report, archived JAR
-- [ ] Docker build, `docker images`, running container, logs, stop/start/remove
-- [ ] Registry tag/push if Docker Hub credentials are configured
-- [ ] Ansible first run and second run showing idempotency
-- [ ] HTTP health check and rollback/recovery evidence
-- [ ] Release tag and final repository URL
+## Git and planning
+- [ ] Repository page, README, folder structure and commit history
+- [ ] Backlog/Kanban board with task states
+- [ ] Feature branch and pull request
+- [ ] Review comments and merge evidence
+- [ ] Conflict creation/resolution log
+- [ ] Release tag after green CI
 
-## Suggested terminal evidence commands
+## Application and testing
+- [ ] Local home page
+- [ ] Valid complaint submission and reference
+- [ ] Invalid email and short-description rejection
+- [ ] Tracking before/after reviewer decision
+- [ ] Reject journey and approval journey
+- [ ] Unknown reference
+- [ ] Selenium run with all tests passing
+- [ ] Failure screenshot mechanism demonstrated
+- [ ] Surefire XML/HTML report
+
+## CI/CD and operations
+- [ ] GitHub Actions green run
+- [ ] Jenkins successful build and archived JAR
+- [ ] Deliberately failing test blocks pipeline, followed by fixed green run
+- [ ] Docker build/image listing/running container/logs/stop/start/remove
+- [ ] Registry image/tag if publishing is configured
+- [ ] Ansible first and second run outputs (idempotency)
+- [ ] HTTP health check
+- [ ] Rollback/recovery demonstration
+
+## Suggested commands
 ```bash
 java -version
 mvn -version
 mvn -Dheadless=true -DbaseUrl=http://localhost:8080 test
 git log --oneline --decorate -10
+git tag --list
 docker images
 docker ps -a
 docker logs complaint-portal
 ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
 ```
-
-Redact email addresses, access tokens, passwords, private hostnames and any real consumer data before including screenshots in a report.
+Redact tokens, passwords, personal consumer data and private infrastructure details.
