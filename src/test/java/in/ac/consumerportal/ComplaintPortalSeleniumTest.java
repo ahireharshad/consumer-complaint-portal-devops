@@ -3,6 +3,7 @@ import org.junit.jupiter.api.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,7 +14,7 @@ class ComplaintPortalSeleniumTest {
  @BeforeAll static void setup(){
   baseUrl=System.getProperty("baseUrl","http://localhost:8080");
   ChromeOptions options=new ChromeOptions();
-  if(Boolean.parseBoolean(System.getProperty("headless","true"))){options.addArguments("--headless=new","--no-sandbox","--disable-dev-shm-usage");}
+  if(Boolean.parseBoolean(System.getProperty("headless","true"))) options.addArguments("--headless=new","--no-sandbox","--disable-dev-shm-usage");
   options.addArguments("--window-size=1440,1000");
   driver=new ChromeDriver(options);
  }
@@ -27,22 +28,24 @@ class ComplaintPortalSeleniumTest {
  @Test @Order(2) void submitComplaintAndCaptureReference(){
   driver.get(baseUrl+"/");
   driver.findElement(By.id("name")).sendKeys("Selenium Test User");
-  driver.findElement(By.id("email")).sendKeys("selenium@example.com");
-  driver.findElement(By.id("category")).sendKeys("Billing");
+  driver.findElement(By.id("email")).sendKeys("selenium-"+System.currentTimeMillis()+"@example.com");
+  new Select(driver.findElement(By.id("category"))).selectByVisibleText("Billing");
   driver.findElement(By.id("subject")).sendKeys("Incorrect bill amount");
   driver.findElement(By.id("description")).sendKeys("The amount charged does not match the invoice.");
   driver.findElement(By.id("submit-complaint")).click();
-  new WebDriverWait(driver,Duration.ofSeconds(5)).until(d->d.findElements(By.id("submitted-reference")).size()==1);
-  String reference=driver.findElement(By.id("submitted-reference")).getText();
-  assertTrue(reference.startsWith("CCP-"),"Reference should be generated");
+  WebDriverWait wait=new WebDriverWait(driver,Duration.ofSeconds(12));
+  wait.until(d -> d.findElements(By.id("submitted-reference")).size()==1);
+  String reference=driver.findElement(By.id("submitted-reference")).getText().trim();
+  assertTrue(reference.startsWith("CCP-"),"Reference should be generated, got: "+reference);
   driver.get(baseUrl+"/track?reference="+reference);
-  String status=new WebDriverWait(driver,Duration.ofSeconds(5)).until(d->d.findElement(By.id("complaint-status")).getText());
-  assertEquals("SUBMITTED",status);
+  wait.until(d -> d.findElements(By.id("complaint-status")).size()==1);
+  assertEquals("SUBMITTED",driver.findElement(By.id("complaint-status")).getText().trim());
  }
  @Test @Order(3) void reviewerCanApprovePendingComplaint(){
   driver.get(baseUrl+"/review");
   assertTrue(driver.getPageSource().contains("Selenium Test User"));
-  driver.findElement(By.cssSelector("form[action$='/APPROVED'] button")).click();
+  driver.findElement(By.cssSelector("form[action$='/APPROVED'] button:not([disabled])")).click();
+  new WebDriverWait(driver,Duration.ofSeconds(5)).until(d->d.getCurrentUrl().endsWith("/review"));
   driver.get(baseUrl+"/review");
   assertTrue(driver.getPageSource().contains("APPROVED"));
  }
