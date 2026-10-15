@@ -1,0 +1,44 @@
+---
+- name: Provision Docker and deploy Consumer Complaint Portal
+  hosts: portal
+  become: true
+  vars:
+    image_name: consumer-complaint-portal
+    image_tag: "1.0"
+    app_port: 8080
+  tasks:
+    - name: Install Docker prerequisites
+      ansible.builtin.apt:
+        name: [docker.io, python3-docker]
+        state: present
+        update_cache: true
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+    - name: Build image from checked-out repository
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        tag: "{{ image_tag }}"
+        source: build
+        build:
+          path: "{{ playbook_dir }}/.."
+      delegate_to: localhost
+      become: false
+    - name: Start application container
+      community.docker.docker_container:
+        name: consumer-complaint-portal
+        image: "{{ image_name }}:{{ image_tag }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ app_port }}:8080"
+    - name: Verify HTTP health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/"
+        status_code: 200
+      register: health
+      retries: 10
+      delay: 6
+      until: health.status == 200
