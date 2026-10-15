@@ -1,58 +1,65 @@
-# Project definition, backlog and 15-task plan
+# Project plan: Consumer Complaint Portal
 
-## Problem statement
-Consumers often cannot tell where to submit a service/product complaint, what information is needed, or whether it has been reviewed. A compact portal should standardize complaint capture, validate essential data, provide a reference and expose the current decision/status.
+**Student:** Harshad Ahire · **Roll number:** 23102C0056  
+**Project:** Selenium Testing for a Consumer Complaint Portal
 
-## Stakeholders
-- Consumer/complainant: submits complaint and tracks progress.
-- Reviewer/support officer: examines details and records approve/reject plus note.
-- Portal administrator/operations: deploys, monitors and maintains the service.
-- Project evaluator: reviews requirements, test evidence, Git and DevOps workflow.
+## 1. Problem statement
+Consumers need a consistent way to submit a product/service complaint, provide enough information for review, receive a reference, and understand the decision. The MVP standardizes submission, basic validation, status lookup and reviewer decisions.
 
-## Objectives and measurable acceptance targets
-- A valid complaint can be submitted and assigned a reference.
-- Invalid email, missing required fields or description under 10 characters is rejected.
-- A submitted reference can be tracked and displays current status.
-- Reviewer can approve/reject a pending complaint and add a note.
-- Selenium smoke suite covers form display, submission/reference, reviewer action and unknown reference.
-- CI runs Maven tests and publishes JUnit reports; failed build/test must prevent subsequent stages.
-- Container responds on port 8080 and Ansible rerun converges without unnecessary changes.
+## 2. Stakeholders
+- Consumer/complainant: enters complaint and tracks reference.
+- Reviewer/support officer: reviews and approves/rejects a submission.
+- Operator/administrator: builds, deploys and monitors the service.
+- Developer/tester: maintains source, tests, CI and release.
+- Evaluator: checks requirements and evidence.
 
-## Constraints and exclusions
-Academic MVP; one application; Java 17/Spring Boot/Maven/H2; local in-memory data resets on restart; no authentication or actual document upload; reviewer page is demo-only. Production use requires access control, privacy/security review, durable DB, audit trail and upload scanning.
+## 3. Goals and measurable success criteria
+- Valid complaint submission creates a reference.
+- Required fields, email syntax and minimum description length are validated server-side.
+- A valid reference displays the current status.
+- Reviewer can decide APPROVED or REJECTED and record a note.
+- Selenium covers home page, submission/tracking, reviewer decision and unknown reference.
+- CI fails on failed tests and archives JUnit reports.
+- Container serves HTTP on port 8080 and deployment automation checks health.
 
-## 15-task backlog
-| ID | User story / task | Acceptance criteria | Evidence |
+## 4. Constraints and exclusions
+Java 17, Spring Boot 3, Maven, Thymeleaf, JPA and H2; local academic demo; no real document upload, authentication, durable database, notifications or audit trail. In-memory H2 data resets on restart. Reviewer endpoints are intentionally unauthenticated and must not be exposed to the internet. Docker/Ansible/Jenkins execution and screenshots must be verified in the student's own environment.
+
+## 5. Fifteen-task backlog and acceptance
+| ID | Task | Acceptance criteria | Current evidence/status |
 |---|---|---|---|
-| T01 | Define problem and scope | Problem, stakeholders, constraints, metrics documented | This plan |
-| T02 | Agile plan and workflow | Stories, 15 tasks, DoD and lifecycle documented | Plan/workflow |
-| T03 | Requirements and architecture | SRS, use cases, data model and local stack documented | SRS |
-| T04 | Initialize repository | README, ignore rules, folder layout and branch policy | Git history |
-| T05 | Build submission workflow | Valid form saves complaint and reference | App + commit |
-| T06 | Complete reviewer/status flow | Track, approve/reject and notes work | Browser demo |
-| T07 | Configure CI | Jenkinsfile runs Maven and archives artifacts | Jenkins run |
-| T08 | Package/deploy | Docker image runs on port 8080 | Container screenshot |
-| T09 | Selenium design/execution | Four UI journeys and assertions available | Surefire report |
-| T10 | CI test gate | Maven test stage fails build on failing tests | Failed/success run |
-| T11 | Container lifecycle | Build/run/log/stop/remove documented | Docker log |
-| T12 | Continuous delivery | Versioned image and optional registry push | Registry screenshot |
-| T13 | Configuration management | Ansible playbook configures Docker and container | Playbook output |
-| T14 | Provision/reliability | Health check and repeat-run idempotency assessed | Play recap |
-| T15 | Release/evidence | Smoke tests, limitations, release tag and evidence index | Release checklist |
+| T01 | Problem definition and scope | Problem, stakeholders, objectives, constraints, metrics recorded | Documented |
+| T02 | Agile/DevOps planning | Stories, 15-task plan, DoD and workflow diagram | Documented; real board not created |
+| T03 | Requirements and architecture | SRS, use cases, architecture, data model, endpoints, local setup | Documented/source present; local setup must be run |
+| T04 | GitHub initialization | README, ignore rules, folder layout, issue templates, branch policy | Files present; only main branch confirmed |
+| T05 | First feature branch workflow | Feature branch, PR, review, merge evidence | Not demonstrated; no PR found |
+| T06 | Functional MVP and collaboration | Submission, validation, reviewer decision, tracking, conflict resolution, tag | Core source present; conflict/tag evidence outstanding |
+| T07 | Jenkins CI | Jenkins job, trigger, build log and archived JAR | Jenkinsfile present; Jenkins job not verified |
+| T08 | Pipeline/deployment | Pipeline as code, deployment target, configurable setting, live URL | Partial: Jenkinsfile; live deployment not verified |
+| T09 | Selenium local testing | 3–5 journeys, assertions, reports, failure screenshot mechanism | Selenium tests present; CI has a failing test; screenshot capture not automated |
+| T10 | Continuous testing | Test gate, failure evidence, defect fix and green rerun | Incomplete: latest observed workflow failed during UI test |
+| T11 | Docker lifecycle | Dockerfile, build/run/log/stop/restart/remove evidence | Files/commands documented; runtime evidence absent |
+| T12 | Jenkins-Docker CD | Versioned image, registry publish, automatic deploy | Partial: versioned image build/optional push; publish/deploy not verified |
+| T13 | Configuration management | Ansible inventory/playbook and first run log | Files present; playbook execution not verified |
+| T14 | Provisioning/reliability | Clean node, idempotency, health check and rollback | Partial: health-check task exists; run/idempotency/rollback evidence absent |
+| T15 | Release/evidence | Release tag, report, evidence checklist and updated backlog | Checklist present; release tag/screenshots/report outstanding |
 
-## User stories
-- As a consumer, I want to submit a complaint with contact details and description so the support team can understand the issue.
-- As a consumer, I want a unique reference so I can check progress later.
-- As a reviewer, I want to approve or reject a pending complaint and record a note.
-- As an operator, I want repeatable builds and container deployment so releases are consistent.
+## 6. User stories
+- As a consumer, I can submit a complaint with contact details and description.
+- As a consumer, I receive a reference and can track the status.
+- As a reviewer, I can approve/reject a pending complaint with a note.
+- As an operator, I can build/test/package/deploy repeatably.
 
-## Definition of Done
-- Acceptance criteria verified; input validated server-side.
-- Code committed with meaningful message and reviewed before merge.
-- Automated tests pass; test report is archived.
-- Image is versioned; no credentials committed.
-- Deployment health check passes; rollback procedure and limitations documented.
-- Screenshots/logs are genuine outputs from the student's environment.
+## 7. Definition of Done
+- Acceptance criteria met and input validation occurs server-side.
+- Changes use a named feature branch, meaningful commits and review before merge.
+- Maven/Selenium tests pass and JUnit reports are retained.
+- Docker image is versioned; credentials are not committed.
+- Deployment health check succeeds and rollback is documented.
+- Evidence is captured from actual executions and secrets/consumer data are redacted.
 
-## Branch policy
-Use `main` for release-ready code and `feature/<short-name>` for work. Open PRs against main, include acceptance criteria, require tests/review, squash merge, and tag releases `v1.0.0`. Do not fabricate PR/review/conflict evidence; demonstrate these operations in GitHub.
+## 8. Sprint/Kanban plan
+Suggested academic plan: Sprint 1 (T01–T04); Sprint 2 (T05–T06); Sprint 3 (T07–T10); Sprint 4 (T11–T15). Track each item as Backlog → Ready → In Progress → Review/Test → Done. A task is not Done solely because a configuration file exists; its execution evidence is required.
+
+## 9. Branching and release policy
+Use `main` for stable releases and `feature/<short-name>` for work. Open PRs against main, link the issue, describe acceptance criteria, require tests/review, then merge. Use `v1.0.0` only after verification. Create conflict-resolution evidence honestly by making divergent edits on two branches, merging one, then resolving the second branch.
