@@ -36,7 +36,8 @@ class ComplaintPortalSeleniumTest {
   String reference=driver.findElement(By.id("submitted-reference")).getText();
   assertTrue(reference.startsWith("CCP-"),"Reference should be generated");
   driver.get(baseUrl+"/track?reference="+reference);
-  assertTrue(new WebDriverWait(driver,Duration.ofSeconds(5)).until(d->d.findElement(By.id("complaint-status")).getText().equals("SUBMITTED")));
+  String status=new WebDriverWait(driver,Duration.ofSeconds(5)).until(d->d.findElement(By.id("complaint-status")).getText());
+  assertEquals("SUBMITTED",status);
  }
  @Test @Order(3) void reviewerCanApprovePendingComplaint(){
   driver.get(baseUrl+"/review");
