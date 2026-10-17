@@ -1,67 +1,79 @@
+
 pipeline {
   agent any
-  options { timestamps(); disableConcurrentBuilds() }
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
 
   environment {
     IMAGE_NAME = 'consumer-complaint-portal'
     IMAGE_TAG  = "${env.BUILD_NUMBER}"
-    // Jenkins occupies port 8080 on this host; the app runs on 8088.
     APP_PORT   = '8088'
   }
 
   stages {
     stage('Checkout') {
-      steps { checkout scm }
+      steps {
+        checkout scm
+      }
     }
 
     stage('Build package') {
-      steps { sh 'mvn -B -DskipTests clean package' }
+      steps {
+        bat 'mvn -B -DskipTests clean package'
+      }
     }
 
     stage('Start application for Selenium') {
       steps {
-        sh '''
-          java -Dserver.port=${APP_PORT} \
-               -jar target/consumer-complaint-portal-1.0.0.jar \
-               > app.log 2>&1 &
-          echo $! > app.pid
-          echo "[CI] Waiting for app on port ${APP_PORT}..."
-          for i in $(seq 1 35); do
-            if curl --fail --silent http://localhost:${APP_PORT}/ > /dev/null 2>&1; then
-              echo "[CI] App is reachable on port ${APP_PORT}"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "[CI] App did not start within 70 s. Log:"
-          cat app.log
-          exit 1
+        bat '''
+          if exist app.log del app.log
+          start "ConsumerComplaintApp" /B java -Dserver.port=%APP_PORT% -jar target\\consumer-complaint-portal-1.0.0.jar > app.log 2>&1
+          echo [CI] Waiting for app on port %APP_PORT%...
+          powershell -NoProfile -ExecutionPolicy Bypass -Command "$ready=$false; for($i=0;$i -lt 35;$i++){ try { $r=Invoke-WebRequest -Uri 'http://localhost:%APP_PORT%/' -TimeoutSec 2 -UseBasicParsing; if($r.StatusCode -eq 200){$ready=$true; break} } catch {}; Start-Sleep -Seconds 2 }; if(-not $ready){ Get-Content app.log; exit 1 }"
+          if errorlevel 1 (
+            type app.log
+            exit /b 1
+          )
+          echo [CI] App is reachable.
         '''
       }
     }
 
     stage('Selenium UI tests') {
       steps {
-        sh 'mvn -B -Dheadless=true -DbaseUrl=http://localhost:${APP_PORT} test'
+        bat 'mvn -B -Dheadless=true -DbaseUrl=http://localhost:%APP_PORT% test'
       }
     }
 
     stage('Build Docker image') {
       steps {
-        sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest .'
+        bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% -t %IMAGE_NAME%:latest .'
       }
     }
 
     stage('Publish image (optional)') {
-      when { expression { return env.DOCKERHUB_USER?.trim() } }
+      when {
+        expression { return env.DOCKERHUB_USER?.trim() }
+      }
       steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub',
-                                          usernameVariable: 'DOCKER_USER',
-                                          passwordVariable: 'DOCKER_PASS')]) {
-          sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-          sh 'docker tag ${IMAGE_NAME}:${IMAGE_TAG} "$DOCKERHUB_USER/${IMAGE_NAME}:${IMAGE_TAG}"'
-          sh 'docker push "$DOCKERHUB_USER/${IMAGE_NAME}:${IMAGE_TAG}"'
-          sh 'docker logout'
+        withCredentials([
+          usernamePassword(
+            credentialsId: 'dockerhub',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+          )
+        ]) {
+          bat '''
+            @echo off
+            echo Logging in to Docker Hub
+            docker login -u "%DOCKER_USER%" --password-stdin
+            if errorlevel 1 exit /b 1
+          '''
+          bat 'docker tag %IMAGE_NAME%:%IMAGE_TAG% %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%'
+          bat 'docker push %DOCKERHUB_USER%/%IMAGE_NAME%:%IMAGE_TAG%'
+          bat 'docker logout'
         }
       }
     }
@@ -69,14 +81,17 @@ pipeline {
 
   post {
     always {
-      // Stop the app even when Selenium tests fail
-      sh 'if [ -f app.pid ]; then kill "$(cat app.pid)" 2>/dev/null || true; rm -f app.pid; fi'
+      bat '''
+        @echo off
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=Get-CimInstance Win32_Process -Filter \\"Name='java.exe'\\" | Where-Object { $_.CommandLine -like '*consumer-complaint-portal-1.0.0.jar*' -and $_.CommandLine -like '*server.port=8088*' }; foreach($x in $p){ Stop-Process -Id $x.ProcessId -Force -ErrorAction SilentlyContinue }"
+        exit /b 0
+      '''
       junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
       archiveArtifacts allowEmptyArchive: true,
-                       artifacts: 'target/*.jar,app.log,target/screenshots/**,target/surefire-reports/**'
+        artifacts: 'target/*.jar,app.log,target/screenshots/**,target/surefire-reports/**'
     }
     failure {
-      echo '[CI] Build FAILED -- review surefire-reports and app.log above.'
+      echo '[CI] Build FAILED -- review the console, Surefire reports and app.log.'
     }
   }
 }
