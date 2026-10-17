@@ -1,37 +1,65 @@
-name: Java CI
+﻿name: Java CI
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+
+# Port 8088 avoids conflicts with services commonly bound to 8080 on runners.
+env:
+  APP_PORT: 8088
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
+
       - uses: browser-actions/setup-chrome@v1
-      - name: Build package
+
+      - name: Build package (skip tests)
         run: mvn -B -DskipTests clean package
-      - name: Start application
+
+      - name: Start application on port ${{ env.APP_PORT }}
         run: |
-          java -jar target/consumer-complaint-portal-1.0.0.jar > app.log 2>&1 &
+          java -Dserver.port=$APP_PORT \
+               -jar target/consumer-complaint-portal-1.0.0.jar \
+               > app.log 2>&1 &
           echo $! > app.pid
-          for i in $(seq 1 30); do curl --fail --silent http://localhost:8080/ >/dev/null && exit 0; sleep 2; done
+          echo "Waiting for app on port $APP_PORT..."
+          for i in $(seq 1 35); do
+            if curl --fail --silent http://localhost:$APP_PORT/ > /dev/null 2>&1; then
+              echo "App is up on port $APP_PORT"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App did not start in 70 s. Log:"
           cat app.log
           exit 1
-      - name: Selenium tests
-        run: mvn -B -Dheadless=true -DbaseUrl=http://localhost:8080 test
-      - name: Upload test report
+
+      - name: Selenium UI tests
+        run: mvn -B -Dheadless=true -DbaseUrl=http://localhost:$APP_PORT test
+
+      - name: Upload test reports and failure screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
-          path: target/surefire-reports/
+          path: |
+            target/surefire-reports/
+            target/screenshots/
+
       - name: Stop application
         if: always()
-        run: if [ -f app.pid ]; then kill "$(cat app.pid)" || true; fi
+        run: |
+          if [ -f app.pid ]; then
+            kill "$(cat app.pid)" 2>/dev/null || true
+            rm -f app.pid
+          fi

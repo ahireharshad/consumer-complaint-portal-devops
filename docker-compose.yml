@@ -1,9 +1,30 @@
-services:
+﻿services:
   portal:
     build: .
     image: consumer-complaint-portal:1.0
+    # HOST_PORT lets you override the host-side port without touching this file.
+    # Defaults to 8088 to avoid the conflict with Jenkins on 8080.
+    # The container always listens on 8080 (ENV PORT=8080 in Dockerfile).
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8088}:8080"
     environment:
       PORT: 8080
     restart: unless-stopped
+    healthcheck:
+      # Verified tool inventory for eclipse-temurin:17-jre (Ubuntu 26.04):
+      #   /bin/sh  -> dash  (NOT bash; /dev/tcp not supported)
+      #   /bin/bash         present but CMD-SHELL always calls /bin/sh
+      #   curl 8.18.0       present  <- used here
+      #   wget              present  (fallback option)
+      #   nc / python3      absent
+      #
+      # curl --fail returns exit 1 on HTTP 4xx/5xx, exit 0 on 2xx/3xx.
+      # --max-time 4 ensures it exits before Docker's timeout (5s).
+      # --silent --show-error suppresses progress but prints errors on failure.
+      test:
+        - "CMD-SHELL"
+        - "curl --fail --silent --show-error --max-time 4 http://127.0.0.1:8080/"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s

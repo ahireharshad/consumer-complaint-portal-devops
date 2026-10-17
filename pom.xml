@@ -3,7 +3,12 @@
   <modelVersion>4.0.0</modelVersion>
   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.3.5</version><relativePath/></parent>
   <groupId>in.ac.consumerportal</groupId><artifactId>consumer-complaint-portal</artifactId><version>1.0.0</version><name>Consumer Complaint Portal</name>
-  <properties><java.version>17</java.version><selenium.version>4.25.0</selenium.version></properties>
+  <properties>
+    <java.version>17</java.version>
+    <selenium.version>4.25.0</selenium.version>
+    <headless>true</headless>
+    <baseUrl>http://localhost:8088</baseUrl>
+  </properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-thymeleaf</artifactId></dependency>
@@ -17,5 +22,5 @@
     <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><configuration><systemPropertyVariables><headless>${headless}</headless><baseUrl>${baseUrl}</baseUrl></systemPropertyVariables></configuration></plugin>
   </plugins></build>
-  <profiles><profile><id>ui-tests</id><properties><headless>true</headless><baseUrl>http://localhost:8080</baseUrl></properties></profile></profiles>
+  <profiles><profile><id>ui-tests</id><properties><headless>true</headless><baseUrl>http://localhost:8088</baseUrl></properties></profile></profiles>
 </project>

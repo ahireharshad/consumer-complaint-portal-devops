@@ -1,8 +1,31 @@
+# Maven build outputs
 target/
+*.jar
+*.war
+*.ear
+
+# IDE and Editor files
 .idea/
 .vscode/
 *.iml
-.env
-*.log
+*.ipr
+*.iws
+
+# Operating system artifacts
 .DS_Store
+Thumbs.db
+
+# Test artifacts and failure screenshots
+screenshots/
+target/screenshots/
 .selenium/
+
+# Runtime logs and process IDs
+*.log
+app.log
+*.pid
+app.pid
+
+# Environment and secrets
+.env
+*.local

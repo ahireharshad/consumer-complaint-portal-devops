@@ -63,7 +63,12 @@ public class ComplaintController {
         if (!decision.equals("APPROVED") && !decision.equals("REJECTED")) {
             return "redirect:/review";
         }
-        repository.findById(id).ifPresent(c -> c.decide(decision, clean(note)));
+        repository.findById(id).ifPresent(c -> {
+            if ("SUBMITTED".equals(c.getStatus())) {
+                c.decide(decision, clean(note));
+                repository.save(c);
+            }
+        });
         return "redirect:/review";
     }
 

@@ -1,40 +1,132 @@
----
-- name: Provision Docker and deploy Consumer Complaint Portal
+﻿---
+# =============================================================================
+# ansible/deploy.yml - Consumer Complaint Portal deployment playbook
+# =============================================================================
+#
+# Usage:
+#   ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+#
+# Optional overrides (pass with -e):
+#   image_name     Docker image name   (default: consumer-complaint-portal)
+#   image_tag      Docker image tag    (default: "1.0")
+#   app_port       Host-side port      (default: 8088)
+#
+# ROLLBACK STRATEGY
+# -----------------
+# A genuine rollback requires a previous working image on the target host.
+# This playbook implements a conservative approach:
+#   1. Before removing the old container it records the old image reference.
+#   2. If the health check fails it restarts a container from the old image.
+#   3. If no previous image is available it fails with a clear message.
+#
+# =============================================================================
+
+- name: Deploy Consumer Complaint Portal
   hosts: portal
   become: true
   vars:
-    image_name: consumer-complaint-portal
-    image_tag: "1.0"
-    app_port: 8080
+    image_name:     consumer-complaint-portal
+    image_tag:      "1.0"
+    app_port:       8088          # Host-side port; container always binds :8080
+    container_name: consumer-complaint-portal
+
   tasks:
-    - name: Install Docker prerequisites
+
+    # -----------------------------------------------------------------------
+    # 1. Install Docker on the target host
+    # -----------------------------------------------------------------------
+    - name: Install Docker and Python Docker SDK
       ansible.builtin.apt:
-        name: [docker.io, python3-docker]
+        name:
+          - docker.io
+          - python3-docker
         state: present
         update_cache: true
-    - name: Ensure Docker service is enabled and running
+
+    - name: Ensure Docker is started and enabled
       ansible.builtin.service:
         name: docker
         state: started
         enabled: true
-    - name: Build image from checked-out repository
+
+    # -----------------------------------------------------------------------
+    # 2. Build the image on the control node, export it, transfer it
+    # -----------------------------------------------------------------------
+    - name: Build Docker image on control node
       community.docker.docker_image:
         name: "{{ image_name }}"
-        tag: "{{ image_tag }}"
+        tag:  "{{ image_tag }}"
         source: build
         build:
           path: "{{ playbook_dir }}/.."
+        force_source: true
       delegate_to: localhost
       become: false
-    - name: Start application container
+
+    - name: Export image to tarball on control node
+      community.docker.docker_image:
+        name: "{{ image_name }}:{{ image_tag }}"
+        archive_path: "/tmp/{{ image_name }}_{{ image_tag }}.tar"
+        source: local
+      delegate_to: localhost
+      become: false
+
+    - name: Copy image tarball to target host
+      ansible.builtin.copy:
+        src:  "/tmp/{{ image_name }}_{{ image_tag }}.tar"
+        dest: "/tmp/{{ image_name }}_{{ image_tag }}.tar"
+        mode: "0644"
+
+    - name: Load image on target host
+      community.docker.docker_image:
+        name: "{{ image_name }}:{{ image_tag }}"
+        load_path: "/tmp/{{ image_name }}_{{ image_tag }}.tar"
+        source: load
+
+    - name: Remove image tarball from target host
+      ansible.builtin.file:
+        path: "/tmp/{{ image_name }}_{{ image_tag }}.tar"
+        state: absent
+
+    # -----------------------------------------------------------------------
+    # 3. Record the previous image so rollback has something to restore
+    # -----------------------------------------------------------------------
+    - name: Record image currently used by the running container (for rollback)
+      community.docker.docker_container_info:
+        name: "{{ container_name }}"
+      register: existing_container
+      ignore_errors: true   # container may not exist on first deploy
+
+    - name: Set previous_image fact
+      ansible.builtin.set_fact:
+        previous_image: >-
+          {{ existing_container.container.Config.Image
+             if (existing_container.exists | default(false))
+             else '' }}
+
+    # -----------------------------------------------------------------------
+    # 4. Rolling update: stop old container, start new one
+    # -----------------------------------------------------------------------
+    - name: Stop and remove existing container
       community.docker.docker_container:
-        name: consumer-complaint-portal
+        name: "{{ container_name }}"
+        state: absent
+        force_kill: true
+      ignore_errors: true
+
+    - name: Start new container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
         image: "{{ image_name }}:{{ image_tag }}"
         state: started
         restart_policy: unless-stopped
         published_ports:
           - "{{ app_port }}:8080"
-    - name: Verify HTTP health endpoint
+
+    # -----------------------------------------------------------------------
+    # 5. Health check
+    # -----------------------------------------------------------------------
+    - name: Wait for application to become healthy
       ansible.builtin.uri:
         url: "http://127.0.0.1:{{ app_port }}/"
         status_code: 200
@@ -42,3 +134,42 @@
       retries: 10
       delay: 6
       until: health.status == 200
+      ignore_errors: true
+
+    # -----------------------------------------------------------------------
+    # 6. Rollback if health check failed
+    # -----------------------------------------------------------------------
+    - name: Rollback - stop the failed new container
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        force_kill: true
+      when: health is failed
+
+    - name: Rollback - restart from previous image (if available)
+      community.docker.docker_container:
+        name: "{{ container_name }}"
+        image: "{{ previous_image }}"
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - "{{ app_port }}:8080"
+      when: health is failed and previous_image != ''
+
+    - name: Rollback - fail with actionable message (no previous image)
+      ansible.builtin.fail:
+        msg: >
+          Health check failed after {{ health.attempts }} attempts.
+          No previous container image was recorded, so automatic rollback
+          is not possible. Re-deploy a known-good image tag manually:
+            ansible-playbook -i inventory.ini deploy.yml -e image_tag=<good_tag>
+      when: health is failed and previous_image == ''
+
+    - name: Rollback - fail after restoring previous container
+      ansible.builtin.fail:
+        msg: >
+          Health check failed after {{ health.attempts }} attempts.
+          The new container has been removed and the previous container
+          (image: {{ previous_image }}) has been restarted.
+          Fix the issue in image {{ image_name }}:{{ image_tag }} and re-deploy.
+      when: health is failed and previous_image != ''

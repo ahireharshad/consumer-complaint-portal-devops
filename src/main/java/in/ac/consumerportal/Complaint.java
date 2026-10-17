@@ -17,11 +17,33 @@ public class Complaint {
  public Complaint(String consumerName,String email,String category,String subject,String description) {
   this.consumerName=consumerName; this.email=email; this.category=category; this.subject=subject; this.description=description; this.status="SUBMITTED";
  }
- @PrePersist void assignReference(){ if(referenceId==null) referenceId="CCP-"+System.nanoTime()%1000000; if(createdAt==null)createdAt=LocalDateTime.now(); }
- public Long getId(){return id;} public String getReferenceId(){return referenceId;}
- public String getConsumerName(){return consumerName;} public String getEmail(){return email;}
- public String getCategory(){return category;} public String getSubject(){return subject;}
- public String getDescription(){return description;} public String getStatus(){return status;}
- public String getReviewerNote(){return reviewerNote;} public LocalDateTime getCreatedAt(){return createdAt;}
- public void decide(String decision,String note){this.status=decision;this.reviewerNote=note==null?"":note;}
+    @PrePersist
+    void assignReference() {
+        if (referenceId == null) {
+            long token = Math.abs(System.nanoTime() % 1000000L);
+            referenceId = String.format("CCP-%06d", token);
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
+    public Long getId() { return id; }
+    public String getReferenceId() { return referenceId; }
+    public String getConsumerName() { return consumerName; }
+    public String getEmail() { return email; }
+    public String getCategory() { return category; }
+    public String getSubject() { return subject; }
+    public String getDescription() { return description; }
+    public String getStatus() { return status; }
+    public String getReviewerNote() { return reviewerNote; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+
+    public void decide(String decision, String note) {
+        if (!"SUBMITTED".equals(this.status)) {
+            throw new IllegalStateException("Cannot change decision for complaint in status: " + this.status);
+        }
+        this.status = decision;
+        this.reviewerNote = note == null ? "" : note;
+    }
 }
